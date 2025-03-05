@@ -1,0 +1,301 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Dashboard</title>
+    <link 
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>스마트 홈 시스템</h1>
+        <div class="dashboard">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-thermometer-half"></i>
+                    </div>
+                    <h3 class="card-title">온도</h3>
+                </div>
+                <div class="card-value" id="temperature">-- °C</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <h3 class="card-title">습도</h3>
+                </div>
+                <div class="card-value" id="humidity">-- %</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                    <h3 class="card-title">조도</h3>
+                </div>
+                <div class="card-value" id="light">--</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-ruler"></i>
+                    </div>
+                    <h3 class="card-title">거리</h3>
+                </div>
+                <div class="card-value" id="distance">-- cm</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <h3 class="card-title">LED 조명</h3>
+                </div>
+                <div class="card-content">
+                    <div class="card-value" id="led_state">--</div>
+                    <div class="led-controls">
+                        <button class="led-button" onclick="controlLED('on')">
+                            <i class="fas fa-power-on"></i> ON
+                        </button>
+                        <button class="led-button" onclick="controlLED('off')">
+                            <i class="fas fa-power-off"></i> OFF
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-power-off"></i>
+                    </div>
+                    <h3 class="card-title">스마트 홈 시스템</h3>
+                </div>
+                <div class="card-value" id="program_state">--</div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <h3 class="card-title">CCTV</h3>
+                </div>
+                <div class="card-value">
+                    <button onclick="location.href='/cctv'" class="cctv-button">CCTV 보기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container charts-container">
+        <div class="dashboard">
+            <div class="card chart-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-thermometer-half"></i>
+                    </div>
+                    <h3 class="card-title">온도 그래프</h3>
+                </div>
+                <div id="temperatureChart"></div>
+            </div>
+
+            <div class="card chart-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <h3 class="card-title">습도 그래프</h3>
+                </div>
+                <div id="humidityChart"></div>
+            </div>
+
+            <div class="card chart-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                    <h3 class="card-title">조도 그래프</h3>
+                </div>
+                <div id="lightChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <script 
+src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.41.0/apexcharts.min.js"></script>
+
+    <script>
+        function controlLED(state) {
+            fetch(`/control/led/${state}`, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('LED control response:', data);
+                    updateSensorData();
+                })
+                .catch(error => {
+                    console.error('Error controlling LED:', error);
+                });
+        }
+        // 차트 초기화
+        let tempData = Array(30).fill(null);
+        let humData = Array(30).fill(null);
+        let lightData = Array(30).fill(null);
+        let timeLabels = Array(30).fill('');
+
+        // 차트 옵션 설정
+        const chartOptions = {
+            chart: {
+                type: 'line',
+                animations: {
+                    enabled: true,
+                    easing: 'linear',
+                    dynamicAnimation: {
+                        speed: 1000
+                    }
+                },
+                toolbar: {
+                    show: false
+                },
+                background: 'transparent'
+            },
+            stroke: {
+                curve: 'smooth',
+                width: 3
+            },
+            grid: {
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+            },
+            xaxis: {
+                categories: timeLabels,
+                labels: {
+                    style: {
+                        colors: '#fff'
+                    }
+                }
+            },
+            yaxis: {
+                labels: {
+                    style: {
+                        colors: '#fff'
+                    }
+                }
+            },
+            theme: {
+                mode: 'dark'
+            },
+            tooltip: {
+                theme: 'dark'
+            }
+        };
+
+        // 차트 생성
+        const tempChart = new ApexCharts(document.querySelector("#temperatureChart"), {
+            ...chartOptions,
+            series: [{
+                name: 'Temperature',
+                data: tempData
+            }],
+            colors: ['#ff9800']
+        });
+
+        const humChart = new ApexCharts(document.querySelector("#humidityChart"), {
+            ...chartOptions,
+            series: [{
+                name: 'Humidity',
+                data: humData
+            }],
+            colors: ['#2196F3']
+        });
+
+        const lightChart = new ApexCharts(document.querySelector("#lightChart"), {
+            ...chartOptions,
+            series: [{
+                name: 'Light Level',
+                data: lightData
+            }],
+            colors: ['#4CAF50']
+        });
+
+        // 차트 렌더링
+        tempChart.render();
+        humChart.render();
+        lightChart.render();
+
+        function updateSensorData() {
+            fetch('/api/sensor_data')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Received data:', data);
+
+                    if (data.temp !== undefined && data.temp !== null) {
+                        document.getElementById("temperature").innerText = `${data.temp} °C`;
+                    }
+                    if (data.hum !== undefined && data.hum !== null) {
+                        document.getElementById("humidity").innerText = `${data.hum} %`;
+                    }
+                    if (data.light !== undefined && data.light !== null) {
+                        document.getElementById("light").innerText = `${data.light}`;
+                    }
+                    if (data.distance !== undefined && data.distance !== null) {
+                        document.getElementById("distance").innerText = `${data.distance} cm`;
+                    }
+                    if (data.led_white !== undefined) {
+                        document.getElementById("led_state").innerText =
+                            data.led_white ? "ON" : "OFF";
+                        document.getElementById("led_state").className =
+                            `card-value ${data.led_white ? 'text-success' : 'text-danger'}`;
+                    }
+                    if (data.program_state !== undefined) {
+                        document.getElementById("program_state").innerText =
+                            data.program_state ? "실행중" : "종료됨";
+                        document.getElementById("program_state").className =
+                            `card-value ${data.program_state ? 'text-success' : 'text-danger'}`;
+                    }
+                    const now = new Date().toLocaleTimeString();
+
+                    tempData.push(data.temp);
+                    humData.push(data.hum);
+                    lightData.push(data.light);
+                    timeLabels.push(now);
+
+                    if (tempData.length > 30) {
+                        tempData.shift();
+                        humData.shift();
+                        lightData.shift();
+                        timeLabels.shift();
+                    }
+
+                    tempChart.updateSeries([{
+                        data: tempData
+                    }]);
+                    humChart.updateSeries([{
+                        data: humData
+                    }]);
+                    lightChart.updateSeries([{
+                        data: lightData
+                    }]);
+                })
+                .catch(error => {
+                    console.error('Error fetching sensor data:', error);
+                });
+        }
+
+        setInterval(updateSensorData, 3000);
+        updateSensorData();
+    </script>
+</body>
+
+</html>
